@@ -8,10 +8,9 @@ use std::collections::HashMap;
 use std::env;
 use std::fs::File;
 use std::io::prelude::*;
-use std::io::{stderr, BufReader, BufWriter, Write};
+use std::io::{self, stderr, BufReader, BufWriter, Write};
 use std::process;
 
-fn get_rc_path() -> Result<String, Box<dyn std::error::Error>> {
 /// Returns the path of the warprc file.
 ///
 /// This file contains the mappings for points to paths. It matches the format of the original
@@ -24,31 +23,59 @@ fn get_rc_path() -> Result<String, Box<dyn std::error::Error>> {
 /// wd-rs:/home/jason/Code/wd-rs
 /// cs:/run/current-system/sw
 /// ```
+fn get_rc_path() -> Result<String, io::Error> {
     match home_dir() {
         Some(mut dir) => {
             dir.push(".warprc");
-            let rc_path = dir.to_str().unwrap().to_string();
-            debug!("Using {}", rc_path);
-            Ok(rc_path)
+
+            let rc_path = match dir.to_str() {
+                Some(path) => {
+                    debug!("using default rc path {}", path);
+                    path
+                }
+                None => {
+                    return Err(io::Error::new(
+                        io::ErrorKind::Other,
+                        "unable to guess path of rc file. (non-UTF8 chars in path)",
+                    ))
+                }
+            };
+
+            Ok(rc_path.to_string())
         }
-        None => {
-            error!("Unable to guess path to your rc file. Define it as an environtment variable as a work around");
-            Ok(String::from("nope, fix this"))
-        }
+        None => Err(io::Error::new(
+            io::ErrorKind::Other,
+            "unable to guess path of rc file. (unable to find home directory)",
+        )),
     }
 }
 
-/// Generate a HashMap with points as the key and the path they reference as the value
-fn get_rc_contents_by_points() -> Result<HashMap<String, String>, Box<dyn std::error::Error>> {
 /// Generate a HashMap with points as the key and the path they reference as the value.
+fn get_rc_contents_by_points() -> Result<HashMap<String, String>, io::Error> {
     let mut map: HashMap<String, String> = HashMap::new();
+    let rc_path = get_rc_path()?;
 
-    let file = File::open(get_rc_path()?)?;
+    let file = match File::open(&rc_path) {
+        Ok(f) => f,
+        Err(e) => {
+            warn!("error opening {} ({})", rc_path, e);
+            return Ok(map);
+        }
+    };
     let reader = BufReader::new(file);
 
-    debug!("reading rc file");
-    for line in reader.lines() {
-        let l = line?;
+    debug!("reading rc {}", rc_path);
+    for (i, line) in reader.lines().enumerate() {
+        let l = match line {
+            Ok(l) => {
+                trace!("line {}: {}", i + 1, l);
+                l
+            }
+            Err(e) => {
+                error!("line #{} ({})", i + 1, e);
+                continue;
+            }
+        };
         // v = (point, path)
         let v: Vec<&str> = l.splitn(2, ":").collect();
         map.insert(v[0].to_string(), v[1].to_string());
@@ -56,19 +83,34 @@ fn get_rc_contents_by_points() -> Result<HashMap<String, String>, Box<dyn std::e
     Ok(map)
 }
 
-/// Generate a HashMap with paths as the key and an array of points as the value
-fn get_rc_contents_by_paths() -> Result<HashMap<String, Vec<String>>, Box<dyn std::error::Error>> {
 /// Generate a HashMap with paths as the key and an array of points as the value.
 ///
 /// Primarily used to display all points referencing a specific path.
+fn get_rc_contents_by_paths() -> Result<HashMap<String, Vec<String>>, io::Error> {
     let mut map: HashMap<String, Vec<String>> = HashMap::new();
+    let rc_path = get_rc_path()?;
 
-    let file = File::open(get_rc_path()?)?;
+    let file = match File::open(&rc_path) {
+        Ok(f) => f,
+        Err(e) => {
+            warn!("error opening {} ({})", rc_path, e);
+            return Ok(map);
+        }
+    };
     let reader = BufReader::new(file);
 
-    debug!("reading rc file");
-    for line in reader.lines() {
-        let l = line?;
+    debug!("reading rc {}", rc_path);
+    for (i, line) in reader.lines().enumerate() {
+        let l = match line {
+            Ok(l) => {
+                trace!("line {}: {}", i + 1, l);
+                l
+            }
+            Err(e) => {
+                error!("line #{} ({})", i + 1, e);
+                continue;
+            }
+        };
         // v = (point, path)
         let v: Vec<&str> = l.splitn(2, ":").collect();
         let point = v[0].to_string();
@@ -82,16 +124,29 @@ fn get_rc_contents_by_paths() -> Result<HashMap<String, Vec<String>>, Box<dyn st
     Ok(map)
 }
 
-fn save_map_to_rc(map: HashMap<String, String>) -> Result<(), Box<dyn std::error::Error>> {
-    let file = File::create(get_rc_path()?)?;
 /// Write the mappings to the rc file.
+fn save_map_to_rc(map: HashMap<String, String>) -> Result<(), io::Error> {
+    let rc_path = get_rc_path()?;
+
+    let file = match File::create(&rc_path) {
+        Ok(f) => f,
+        Err(e) => {
+            return Err(e);
+        }
+    };
     let mut writer = BufWriter::new(file);
 
-    debug!("Writing rc file");
-    for (point, path) in map.iter() {
-        write!(writer, "{}:{}\n", point, path)?;
+    debug!("writing to rc {}", rc_path);
+    for (i, (point, path)) in map.iter().enumerate() {
+        let v = format!("{}:{}", point, path);
+
+        trace!("writing line {}: {}", i + 1, v);
+        match write!(writer, "{}\n", v) {
+            Ok(_) => {}
+            Err(e) => error!("Error writing line: {}", e),
+        }
     }
-    writer.flush()?;
+
     Ok(())
 }
 
@@ -177,6 +232,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .index(1)
                 .takes_value(true),
         );
+
     let args = app.clone().get_matches();
 
     if args.is_present("help") {
@@ -194,8 +250,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .init()
         .unwrap();
 
-    let current_dir = env::current_dir().unwrap();
-
     match args.subcommand() {
         ("help", Some(_)) => {
             let mut out = stderr();
@@ -203,7 +257,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             eprintln!("");
         }
         ("add", Some(sub_args)) => {
+            let current_dir = env::current_dir().unwrap();
             let base_name = current_dir.file_name().unwrap().to_str().unwrap();
+
             let point = sub_args.value_of("point").unwrap_or(base_name);
             let mut rc_map = get_rc_contents_by_points().unwrap();
             if rc_map.contains_key(point) {
@@ -234,7 +290,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         ("rm", Some(sub_args)) => {
+            let current_dir = env::current_dir().unwrap();
             let base_name = current_dir.file_name().unwrap().to_str().unwrap();
+
             let point = sub_args.value_of("point").unwrap_or(base_name);
             let mut rc_map = get_rc_contents_by_points().unwrap();
             match rc_map.remove(point) {
@@ -246,6 +304,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
         ("show", Some(_)) => {
+            let current_dir = env::current_dir().unwrap();
             let rc_map = get_rc_contents_by_paths().unwrap();
 
             match rc_map.get(current_dir.to_str().unwrap()) {
@@ -262,6 +321,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         ("hook", Some(sub_args)) => {
             let shell = sub_args.value_of("shell").unwrap();
+            let bin_name = match env::current_exe() {
+                Ok(p) => p.to_str().unwrap_or("warpdir").to_string(),
+                Err(_) => String::from("warpdir"),
+            };
             match shell {
                 "bash" => {
                     println!(
