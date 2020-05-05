@@ -12,6 +12,18 @@ use std::io::{stderr, BufReader, BufWriter, Write};
 use std::process;
 
 fn get_rc_path() -> Result<String, Box<dyn std::error::Error>> {
+/// Returns the path of the warprc file.
+///
+/// This file contains the mappings for points to paths. It matches the format of the original
+/// zsh plugin's .warprc file allowing it to be used interchangeably with this utility.
+///
+/// `<point>:<path>`
+///
+/// For example:
+/// ```
+/// wd-rs:/home/jason/Code/wd-rs
+/// cs:/run/current-system/sw
+/// ```
     match home_dir() {
         Some(mut dir) => {
             dir.push(".warprc");
@@ -28,6 +40,7 @@ fn get_rc_path() -> Result<String, Box<dyn std::error::Error>> {
 
 /// Generate a HashMap with points as the key and the path they reference as the value
 fn get_rc_contents_by_points() -> Result<HashMap<String, String>, Box<dyn std::error::Error>> {
+/// Generate a HashMap with points as the key and the path they reference as the value.
     let mut map: HashMap<String, String> = HashMap::new();
 
     let file = File::open(get_rc_path()?)?;
@@ -45,6 +58,9 @@ fn get_rc_contents_by_points() -> Result<HashMap<String, String>, Box<dyn std::e
 
 /// Generate a HashMap with paths as the key and an array of points as the value
 fn get_rc_contents_by_paths() -> Result<HashMap<String, Vec<String>>, Box<dyn std::error::Error>> {
+/// Generate a HashMap with paths as the key and an array of points as the value.
+///
+/// Primarily used to display all points referencing a specific path.
     let mut map: HashMap<String, Vec<String>> = HashMap::new();
 
     let file = File::open(get_rc_path()?)?;
@@ -68,6 +84,7 @@ fn get_rc_contents_by_paths() -> Result<HashMap<String, Vec<String>>, Box<dyn st
 
 fn save_map_to_rc(map: HashMap<String, String>) -> Result<(), Box<dyn std::error::Error>> {
     let file = File::create(get_rc_path()?)?;
+/// Write the mappings to the rc file.
     let mut writer = BufWriter::new(file);
 
     debug!("Writing rc file");
