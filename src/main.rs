@@ -260,7 +260,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     unset status_code
 }}
 "#,
-                        app.get_bin_name().unwrap_or("warpdir")
+                        bin_name
                     );
                 }
                 _ => error!("unknown shell type '{}'", shell),
