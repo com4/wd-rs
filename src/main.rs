@@ -152,6 +152,44 @@ fn save_map_to_rc(map: HashMap<String, String>) -> Result<(), io::Error> {
     Ok(())
 }
 
+/// Return a hook suitable for evaluating in a bash shell to enable the wd alias function.
+fn bash_hook(bin_name: String) -> String {
+    return format!(
+        r#"wd() {{
+    output=$({} $@)
+    status_code=$?
+    if [[ $status_code -eq 0 ]]; then
+	cd "$output"
+    elif [[ "$output" != "" ]]; then
+        echo "$output"
+    fi
+    unset output
+    unset status_code
+}}
+"#,
+        bin_name
+    );
+}
+
+/// Return a hook suitable for evaluating in a zsh shell to enable the wd alias function.
+fn zsh_hook(bin_name: String) -> String {
+    return format!(
+        r#"wd() {{
+    output=$({} $@)
+    status_code=$?
+    if [[ $status_code -eq 0 ]]; then
+	cd "$output"
+    elif [[ "$output" != "" ]]; then
+        echo "$output"
+    fi
+    unset output
+    unset status_code
+}}
+"#,
+        bin_name
+    );
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let about_text = format!(
         concat!(
@@ -332,23 +370,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 Err(_) => String::from("warpdir"),
             };
             match shell {
-                "bash" => {
-                    println!(
-                        r#"wd() {{
-    output=$({} $@)
-    status_code=$?
-    if [[ $status_code -eq 0 ]]; then
-	cd "$output"
-    elif [[ "$output" != "" ]]; then
-        echo "$output"
-    fi
-    unset output
-    unset status_code
-}}
-"#,
-                        bin_name
-                    );
-                }
+                "bash" => println!("{}", bash_hook(bin_name)),
+                "zsh" => println!("{}", zsh_hook(bin_name)),
                 _ => error!("unknown shell type '{}'", shell),
             }
         }
