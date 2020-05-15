@@ -11,6 +11,8 @@ use std::io::prelude::*;
 use std::io::{self, stderr, BufReader, BufWriter, Write};
 use std::process;
 
+const ENV_RC_PATH: &str = "WD_RC_PATH";
+
 /// Returns the path of the warprc file.
 ///
 /// This file contains the mappings for points to paths. It matches the format of the original
@@ -24,30 +26,30 @@ use std::process;
 /// cs:/run/current-system/sw
 /// ```
 fn get_rc_path() -> Result<String, io::Error> {
-    match home_dir() {
-        Some(mut dir) => {
-            dir.push(".warprc");
-
-            let rc_path = match dir.to_str() {
-                Some(path) => {
-                    debug!("using default rc path {}", path);
-                    path
-                }
-                None => {
-                    return Err(io::Error::new(
-                        io::ErrorKind::Other,
-                        "unable to guess path of rc file. (non-UTF8 chars in path)",
-                    ))
-                }
-            };
-
-            Ok(rc_path.to_string())
-        }
-        None => Err(io::Error::new(
-            io::ErrorKind::Other,
-            "unable to guess path of rc file. (unable to find home directory)",
-        )),
-    }
+    return Ok(match env::var(ENV_RC_PATH) {
+        Ok(d) => d,
+        Err(_) => match home_dir() {
+	    // Try the home directory
+            Some(mut d) => {
+                d.push(".warprc");
+                match d.to_str() {
+		    Some(path) => path.to_string(),
+		    None => {
+			return Err(io::Error::new(
+			    io::ErrorKind::Other,
+			    "unable to guess path of rc file. (non-UTF8 chars in path)",
+			))
+		    }
+		}
+            }
+            None => {
+                return Err(io::Error::new(
+                    io::ErrorKind::Other,
+                    format!("unable to guess path of rc file. (unable to find home directory). try using {}", ENV_RC_PATH),
+                ))
+            }
+        },
+    });
 }
 
 /// Generate a HashMap with points as the key and the path they reference as the value.
@@ -154,15 +156,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let about_text = format!(
         concat!(
             "{}\n\n",
-            "Installation\n\n",
+            "Installation\n",
             "In your shell's rc, add eval $({} hook <shell>) for example: eval $({} hook bash). ",
             "This is necessary because an external script/program can't change the directory ",
             "of your shell by design. Instead this feeds the directory mapped to your warp ",
-            "point back to the shell's cd command."
+            "point back to the shell's cd command.",
+            "\n\n",
+            "ENVIRONMENT VARIABLES:\n",
+            "    {:<15} Location of your rc file"
         ),
         crate_description!(),
         crate_name!(),
-        crate_name!()
+        crate_name!(),
+        ENV_RC_PATH
     );
 
     let app = App::new(crate_name!())
