@@ -4,7 +4,7 @@ waprdir provides shortcuts for `cd` under the `wd` alias. This is a cross-shell/
 
 ## Installing
 
-Download a binary for your system from the [releases page](https://github.com/com4/wd-rs/releases) and put `warpdir` somewhere on your path.
+Download a binary for your system from the [downloads page](https://rc4.net/wd-rs/uv/download.html) and put `warpdir` somewhere on your path.
 
 ### Bash
 
