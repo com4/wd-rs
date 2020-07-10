@@ -2,46 +2,59 @@
 
 waprdir provides shortcuts for `cd` under the `wd` alias. This is a cross-shell/cross-platform drop in replacement the [zsh plugin](https://github.com/mfaerevaag/wd) by mfaerevaag (that is to say all of your warps are stored in `~/.warprc` and are compatible with the plugin.)
 
-## Installing
+To view the repository visit https://rc4.net/wd-rs/
 
-Download a binary for your system from the [downloads page](https://rc4.net/wd-rs/uv/download.html) and put `warpdir` somewhere on your path.
+## Source Control
 
-### Bash
-
-Add the following to your `.bashrc`
-
+If you would like a copy of the repository download the latest version of [Fossil](https://fossil-scm.org) and run something like this:
 ```bash
-# Enable warpdir (https://github.com/com4/wd-rs/)
-WARPDIR=`whereis -b warpdir | awk {'print $2'}`
-if [ -x $WARPDIR ]; then
-    eval "$(warpdir hook bash)"
-fi
+mkdir ./repositories ./wd-rs
+fossil clone https://rc4.net/wd-rs/ ./repositories/wd-rs.fossil
+cd ./wd-rs
+fossil open ../repositories/wd-rs.fossil
 ```
 
-To enable it on existing termianls you can type `source ~/.bashrc`.
+## Building and Releasing
 
-## Usage
-
-```bash
-cd ~/some/nested/directory/thats/tedious/to/tab/complete/mydir
-wd add mydir
-# Successfully added mydir -> ~/some/nested/directory/thats/tedious/to/tab/complete/mydir
-cd ~
-wd mydir
-pwd
-# ~/some/nested/directory/thats/tedious/to/tab/complete/mydir
-```
-
-To remove a warp
+Generally releases are built by running these commands on the target operating system:
 
 ```bash
-wd rm mydir
+emacs Cargo.toml  # update the version
+fossil commit --tag <version>
+rm -rf target/
+cargo build --release
+cd target/release/
+strip warpdir
+tar czf warpdir-$VERSION-$ARCH.tar.gz warpdir
+sha256sum -b warpdir-$VERSION-$ARCH.tar.gz > warpdir-$VERSION-$ARCH.tar.gz.sha256
+
+sha256sum -c warpdir-$VERSION-$ARCH.tar.gz.sha256 \
+  && fossil uv add warpdir-$VERSION-$ARCH.tar.gz warpdir-$VERSION-$ARCH.sha256 \
+  && fossil uv sync
 ```
 
-To list your warps
+They are then synced to the developer machine, hash verified, gpg signed, and uploaded
 
 ```bash
-wd list
+fossil uv sync
+mkdir releases && cd releases
+
+fossil uv export warpdir-$VERSION-$ARCH.tar.gz warpdir-$VERSION-$ARCH.tar.gz
+fossil uv export warpdir-$VERSION-$ARCH.sha256 warpdir-$VERSION-$ARCH.sha256
+sha256sum -c warpdir-$VERSION-$ARCH.sha256
+
+# If it wasn't corrupted
+gpg --local-user <key> --sign --detach-sig -a --output warpdir-$VERSION-$ARCH.tar.gz.gpg warpdir-$VERSION-$ARCH.tar.gz
+gpg --verify warpdir-$VERSION-$ARCH.tar.gz.gpg warpdir-$VERSION-$ARCH.tar.gz
+
+fossil uv add *.gpg
+fossil uv sync
 ```
 
-Also check out `wd help` for more information
+Finally the download page is updated by modifying the `release` variable in download.js, adding the new version information and removing stale entries.
+
+```bash
+fossil uv edit download.js
+fossil uv rm --glob warpdir-$STALE_VERSION*
+fossil uv sync
+```
