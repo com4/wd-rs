@@ -192,6 +192,38 @@ fn zsh_hook(bin_name: String) -> String {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let version = if cfg!(debug_assertions) {
+        let sub_ver = match process::Command::new("fossil")
+            .args(&["timeline", "-t", "ci", "-n", "1"])
+            .output()
+        {
+            Ok(output) => {
+                let info = std::str::from_utf8(&output.stdout).unwrap();
+                let mut hash = String::new();
+                let mut collecting_hash = false;
+                for c in info.chars() {
+                    if collecting_hash && c == ']' {
+                        break;
+                    }
+                    if collecting_hash {
+                        hash.push(c)
+                    }
+                    if c == '[' {
+                        collecting_hash = true;
+                    }
+                }
+                hash
+            }
+            Err(e) => {
+                error!("Error getting commit hash: {}", e);
+                "dev".into()
+            }
+        };
+        format!("{}+{}", crate_version!(), sub_ver)
+    } else {
+        format!("{}", crate_version!())
+    };
+
     let about_text = format!(
         concat!(
             "{}\n\n",
@@ -200,6 +232,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             "This is necessary because an external script/program can't change the directory ",
             "of your shell by design. Instead this feeds the directory mapped to your warp ",
             "point back to the shell's cd command.",
+            "\n\n",
+            "Example .bashrc\n",
+            "WARPDIR=`which warpdir`\n",
+            "if [[ -x $WARPDIR ]]; then\n",
+            "  eval \"$(warpdir hook bash)\"\n",
+            "fi",
             "\n\n",
             "ENVIRONMENT VARIABLES:\n",
             "    {:<15} Location of your rc file"
@@ -212,7 +250,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let app = App::new(crate_name!())
         .about(about_text.as_str())
-        .version(crate_version!())
+        .version(version.as_str())
         .setting(AppSettings::VersionlessSubcommands)
         .setting(AppSettings::DisableVersion)
         .setting(AppSettings::DisableHelpSubcommand)
@@ -223,6 +261,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .short("-v")
                 .multiple(true)
                 .help("Increase the verbosity of output (can be repeated)"),
+        )
+        .arg(
+            Arg::with_name("version")
+                .long("version")
+                .help("Display version information and quit"),
         )
         .arg(
             Arg::with_name("help")
@@ -261,7 +304,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         .long("dry-run")
                         .help("display warps to be removed without removing them"),
                 )
-                .about("clean warps pointing to non-existant directories."),
+                .about("clean warps pointing to non-existent directories."),
         )
         .subcommand(
             SubCommand::with_name("path")
@@ -289,6 +332,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
 
     let args = app.clone().get_matches();
+
+    if args.is_present("version") {
+        eprintln!("{} {}", crate_name!(), version);
+        process::exit(1)
+    }
 
     if args.is_present("help") {
         let mut out = stderr();
