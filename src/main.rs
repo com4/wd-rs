@@ -6,6 +6,7 @@ use clap::{crate_description, crate_name, crate_version, App, AppSettings, Arg, 
 use dirs::home_dir;
 use std::collections::HashMap;
 use std::env;
+use std::fs;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::{self, stderr, BufReader, BufWriter, Write};
@@ -253,6 +254,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .about("Show warp points for current directory"),
         )
         .subcommand(
+            SubCommand::with_name("clean")
+                .arg(
+                    Arg::with_name("dry-run")
+                        .short("d")
+                        .long("dry-run")
+                        .help("display warps to be removed without removing them"),
+                )
+                .about("clean warps pointing to non-existant directories."),
+        )
+        .subcommand(
             SubCommand::with_name("path")
                 .arg(
                     Arg::with_name("point")
@@ -360,6 +371,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
                 None => {
                     println!("no warp points for '{}'", current_dir.to_str().unwrap());
+                }
+            }
+        }
+        ("clean", Some(sub_args)) => {
+            let dry_run_mode = sub_args.is_present("dry-run");
+            let rc_map = get_rc_contents_by_paths().unwrap();
+            for (path, points) in rc_map.iter() {
+                if !fs::metadata(path).is_ok() {
+                    eprintln!("Missing path: {}", path);
+                    let mut rc_map_by_points = get_rc_contents_by_points().unwrap();
+                    for point in points {
+                        eprintln!("  - Removing {}", point);
+                        match rc_map_by_points.remove(point) {
+                            Some(_) => {}
+                            None => error!("Error removing point {}", point),
+                        }
+                    }
+                    if !dry_run_mode {
+                        match save_map_to_rc(rc_map_by_points) {
+                            Ok(_) => eprintln!("Successfully removed {}", path),
+                            Err(e) => error!("Error saving file: {}", e),
+                        }
+                    }
                 }
             }
         }
