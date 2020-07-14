@@ -12,7 +12,7 @@ use std::io::prelude::*;
 use std::io::{self, stderr, BufReader, BufWriter, Write};
 use std::process;
 
-const ENV_RC_PATH: &str = "WD_RC_PATH";
+const ENV_RC_PATH: &str = "WD_CONFIG";
 
 /// Returns the path of the warprc file.
 ///
