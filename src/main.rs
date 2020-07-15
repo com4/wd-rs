@@ -212,10 +212,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         collecting_hash = true;
                     }
                 }
+                if hash.len() != 10 {
+                    debug!("Malformed hash, using default ({})", hash);
+                    hash = "dev".into()
+                }
                 hash
             }
             Err(e) => {
-                error!("Error getting commit hash: {}", e);
+                debug!("Error getting commit hash: {}", e);
                 "dev".into()
             }
         };
@@ -333,6 +337,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let args = app.clone().get_matches();
 
+    let verbosity = args.occurrences_of("verbosity") as usize;
+
+    stderrlog::new()
+        .module(module_path!())
+        .verbosity(verbosity)
+        .init()
+        .unwrap();
+
     if args.is_present("version") {
         eprintln!("{} {}", crate_name!(), version);
         process::exit(1)
@@ -344,14 +356,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         eprintln!("");
         process::exit(1)
     }
-
-    let verbosity = args.occurrences_of("verbosity") as usize;
-
-    stderrlog::new()
-        .module(module_path!())
-        .verbosity(verbosity)
-        .init()
-        .unwrap();
 
     match args.subcommand() {
         ("help", Some(_)) => {
