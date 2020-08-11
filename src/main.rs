@@ -202,40 +202,11 @@ fn zsh_hook(bin_name: String) -> String {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let version = if cfg!(debug_assertions) {
-        let sub_ver = match process::Command::new("fossil")
-            .args(&["timeline", "-t", "ci", "-n", "1"])
-            .output()
-        {
-            Ok(output) => {
-                let info = std::str::from_utf8(&output.stdout).unwrap();
-                let mut hash = String::new();
-                let mut collecting_hash = false;
-                for c in info.chars() {
-                    if collecting_hash && c == ']' {
-                        break;
-                    }
-                    if collecting_hash {
-                        hash.push(c)
-                    }
-                    if c == '[' {
-                        collecting_hash = true;
-                    }
-                }
-                if hash.len() != 10 {
-                    debug!("Malformed hash, using default ({})", hash);
-                    hash = "dev".into()
-                }
-                hash
-            }
-            Err(e) => {
-                debug!("Error getting commit hash: {}", e);
-                "dev".into()
-            }
-        };
-        format!("{}+{}", crate_version!(), sub_ver)
+    let sub_ver = option_env!("VCS_HASH").unwrap_or("");
+    let version = if sub_ver == "" {
+        crate_version!().to_string()
     } else {
-        format!("{}", crate_version!())
+        format!("{}+{}", crate_version!(), sub_ver)
     };
 
     let about_text = format!(
