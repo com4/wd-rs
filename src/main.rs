@@ -156,7 +156,16 @@ fn save_map_to_rc(map: HashMap<String, String>) -> Result<(), io::Error> {
 /// Return a hook suitable for evaluating in a bash shell to enable the wd alias function.
 fn bash_hook(bin_name: String) -> String {
     return format!(
-        r#"wd() {{
+        r#"
+_wd_completions() {{
+    COMMANDS="add clean help hook list path rm show"
+    # Maybe only warp points makes the most sense for completions...
+    WARPS=`wd list --completion`
+    COMPLETIONS="${{WARPS}}"
+    COMPREPLY=($(compgen -W "${{COMPLETIONS}}" "${{COMP_WORDS[1]}}"))
+}}
+
+wd() {{
     output=$({} $@)
     status_code=$?
     if [[ $status_code -eq 0 ]]; then
@@ -167,6 +176,7 @@ fn bash_hook(bin_name: String) -> String {
     unset output
     unset status_code
 }}
+complete -F _wd_completions wd
 "#,
         bin_name
     );
@@ -292,7 +302,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 ))
                 .about("Remove the warp point"),
         )
-        .subcommand(SubCommand::with_name("list").about("Print all warp points"))
+        .subcommand(
+            SubCommand::with_name("list")
+                .arg(Arg::with_name("completion")
+		     .long("completion")
+		     .short("c")
+		     .required(false)
+		     .help(
+			 "List warp points space delimited on a single line for completion scripts",
+                     ))
+                .about("Print all warp points"),
+        )
         .subcommand(
             SubCommand::with_name("show")
                 .arg(Arg::with_name("point").required(false).help(
@@ -381,11 +401,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             }
         }
-        ("list", Some(_sub_args)) => {
+        ("list", Some(sub_args)) => {
+            let completion_mode = sub_args.is_present("completion");
             let rc_map = get_rc_contents_by_points().unwrap();
-            println!("total: {}", rc_map.len());
-            for (point, path) in rc_map.iter() {
-                println!("\t{} -> {}", point, path);
+            if completion_mode {
+                println!(
+                    "{}",
+                    rc_map
+                        .keys()
+                        .map(|k| k.as_str())
+                        .collect::<Vec<_>>()
+                        .join(" ")
+                )
+            } else {
+                println!("total: {}", rc_map.len());
+                for (point, path) in rc_map.iter() {
+                    println!("\t{} -> {}", point, path);
+                }
             }
         }
         ("path", Some(sub_args)) => {
