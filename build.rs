@@ -1,3 +1,4 @@
+use chrono::offset::Utc;
 use std::process;
 
 fn print_vcs_hash() {
@@ -28,20 +29,27 @@ fn print_vcs_hash() {
             }
             if hash.len() != 10 {
                 // Fossil prints a 10 char hash
-                println!("cargo:rustc-env=VCS_HASH={}", DEFAULT);
-                hash = "dev".into()
+                println!("cargo:rustc-env=BUILD_VCS_HASH={}", DEFAULT);
+            } else {
+                println!("cargo:rustc-env=BUILD_VCS_HASH={}", hash);
             }
-            println!("cargo:rustc-env=VCS_HASH={}", hash);
         }
         Err(_e) => {
-            println!("cargo:rustc-env=VCS_HASH={}", DEFAULT);
+            println!("cargo:rustc-env=BUILD_VCS_HASH={}", DEFAULT);
         }
     };
 }
 
+fn print_build_time() {
+    println!(
+        "cargo:rustc-env=BUILD_TIMESTAMP={}",
+        Utc::now().format("%Y-%m-%d %H:%M:%S %Z")
+    );
+}
+
 fn main() {
-    if cfg!(debug_assertions) {
-        // Output VCS_HASH for rustc to be included in the resulting binary's version number.
-        print_vcs_hash();
-    };
+    print_vcs_hash();
+    print_build_time();
+
+    if cfg!(debug_assertions) {};
 }

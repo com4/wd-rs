@@ -2,7 +2,7 @@
 name = "warpdir"
 version = "0.1.2"
 authors = ["jason <jason@zzq.org>"]
-description = "Provides shortcuts for cd under the wd alias. This is a cross-shell/cross-platform drop in replacement the zsh plugin by mfaerevaag."
+description = "Provides shortcuts for cd under the wd alias."
 edition = "2018"
 
 [dependencies]
@@ -13,6 +13,9 @@ stderrlog = "~0.4.0"
 [dependencies.clap]
 version = "~2.33.0"
 default-features = false
+
+[build-dependencies]
+chrono = "~0.4.0"
 
 [profile.release]
 lto = true

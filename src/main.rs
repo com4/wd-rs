@@ -201,14 +201,31 @@ fn zsh_hook(bin_name: String) -> String {
     );
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let sub_ver = option_env!("VCS_HASH").unwrap_or("");
-    let version = if sub_ver == "" {
-        crate_version!().to_string()
-    } else {
-        format!("{}+{}", crate_version!(), sub_ver)
+// Build a fancy version string to display to the user when --version is used.
+fn build_version() -> String {
+    let build_vcs_hash = match option_env!("BUILD_VCS_HASH") {
+        Some(v) => format!(" [{}]", v),
+        None => "".to_string(),
     };
+    let build_timestamp = match option_env!("BUILD_TIMESTAMP") {
+        Some(t) => format!(" {}", t),
+        None => "".to_string(),
+    };
+    let version = if cfg!(debug_assertions) {
+        format!("{}+dev", crate_version!())
+    } else {
+        format!("{}", crate_version!())
+    };
+    return format!("{}{}{}", version, build_vcs_hash, build_timestamp);
+}
 
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let long_version = build_version();
+    let short_version = if cfg!(debug_assertions) {
+        format!("{}+dev", crate_version!())
+    } else {
+        format!("{}", crate_version!())
+    };
     let about_text = format!(
         concat!(
             "{}\n\n",
@@ -235,12 +252,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let app = App::new(crate_name!())
         .about(about_text.as_str())
-        .version(version.as_str())
-        .setting(AppSettings::VersionlessSubcommands)
-        .setting(AppSettings::DisableVersion)
-        .setting(AppSettings::DisableHelpSubcommand)
-        .setting(AppSettings::DisableHelpFlags)
-        .setting(AppSettings::ColoredHelp)
+        .version(short_version.as_str())
+        .global_setting(AppSettings::VersionlessSubcommands)
+	// Version must be handled manually so it's output can be sent to stderr
+	.global_setting(AppSettings::DisableVersion)
+	// Help info must be handled manually so it's output can be sent to stderr
+        .global_setting(AppSettings::DisableHelpSubcommand)
+        .global_setting(AppSettings::DisableHelpFlags)
+        .global_setting(AppSettings::ColoredHelp)
         .arg(
             Arg::with_name("verbosity")
                 .short("-v")
@@ -327,7 +346,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
 
     let args = app.clone().get_matches();
-
     let verbosity = args.occurrences_of("verbosity") as usize;
 
     stderrlog::new()
@@ -337,7 +355,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap();
 
     if args.is_present("version") {
-        eprintln!("{} {}", crate_name!(), version);
+        eprintln!("{} {}", crate_name!(), long_version);
         process::exit(1)
     }
 
