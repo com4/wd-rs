@@ -2,7 +2,9 @@
 extern crate log;
 extern crate stderrlog;
 
-use clap::{crate_description, crate_name, crate_version, App, AppSettings, Arg, SubCommand};
+use clap::{
+    crate_description, crate_name, crate_version, App, AppSettings, Arg, ErrorKind, SubCommand,
+};
 use dirs::home_dir;
 use std::collections::HashMap;
 use std::env;
@@ -254,11 +256,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .about(about_text.as_str())
         .version(short_version.as_str())
         .global_setting(AppSettings::VersionlessSubcommands)
-	// Version must be handled manually so it's output can be sent to stderr
+	// Version is handled manually so it can display the more verbose version and send output to stderr.
 	.global_setting(AppSettings::DisableVersion)
-	// Help info must be handled manually so it's output can be sent to stderr
-        .global_setting(AppSettings::DisableHelpSubcommand)
-        .global_setting(AppSettings::DisableHelpFlags)
         .global_setting(AppSettings::ColoredHelp)
         .arg(
             Arg::with_name("verbosity")
@@ -271,13 +270,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .long("version")
                 .help("Display version information and quit"),
         )
-        .arg(
-            Arg::with_name("help")
-                .long("help")
-                .short("h")
-                .help("Display this help message"),
-        )
-        .subcommand(SubCommand::with_name("help").about("Display this help message"))
         .subcommand(
             SubCommand::with_name("add")
                 .arg(Arg::with_name("point").required(false).help(
@@ -344,8 +336,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .index(1)
                 .takes_value(true),
         );
-
-    let args = app.clone().get_matches();
+    let args = app.get_matches_safe().unwrap_or_else(|e| {
+        if e.kind == ErrorKind::HelpDisplayed {
+            // Display the help text.
+            eprintln!("{}", e.message);
+        } else {
+            eprintln!("Unknown Error: {:?}\n{}", e.kind, e.message);
+        }
+        // Exit with an "error" so the shell script doesn't try passing the output to `cd`
+        process::exit(1);
+    });
     let verbosity = args.occurrences_of("verbosity") as usize;
 
     stderrlog::new()
@@ -359,19 +359,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         process::exit(1)
     }
 
-    if args.is_present("help") {
-        let mut out = stderr();
-        app.write_help(&mut out).unwrap();
-        eprintln!("");
-        process::exit(1)
-    }
-
     match args.subcommand() {
-        ("help", Some(_)) => {
-            let mut out = stderr();
-            app.write_help(&mut out).unwrap();
-            eprintln!("");
-        }
         ("add", Some(sub_args)) => {
             let current_dir = env::current_dir().unwrap();
             let base_name = current_dir.file_name().unwrap().to_str().unwrap();
