@@ -11,7 +11,7 @@ use std::env;
 use std::fs;
 use std::fs::File;
 use std::io::prelude::*;
-use std::io::{self, stderr, BufReader, BufWriter, Write};
+use std::io::{self, BufReader, BufWriter, Write};
 use std::process;
 
 const ENV_RC_PATH: &str = "WD_CONFIG";
