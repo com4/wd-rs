@@ -34,7 +34,7 @@ sha256sum -c warpdir-$VERSION-$ARCH.tar.gz.sha256 \
   && fossil uv sync
 ```
 
-They are then synced to the developer machine, hash verified, gpg signed, and uploaded
+They are then synced to the developer machine, the hash verified, gpg signed, and uploaded
 
 ```bash
 fossil uv sync
@@ -52,7 +52,7 @@ fossil uv add *.gpg
 fossil uv sync
 ```
 
-Finally the download page is updated by modifying the `release` variable in download.js, adding the new version information and removing stale entries.
+Finally, the download page is updated by modifying the `release` variable in download.js, adding the new version information and removing stale entries.
 
 ```bash
 fossil uv edit download.js
