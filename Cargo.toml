@@ -1,6 +1,6 @@
 [package]
 name = "warpdir"
-version = "0.1.2"
+version = "0.1.3"
 authors = ["jason <jason@zzq.org>"]
 description = "Provides shortcuts for cd under the wd alias."
 edition = "2018"
