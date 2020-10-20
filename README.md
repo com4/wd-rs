@@ -17,7 +17,7 @@ fossil open ../repositories/wd-rs.fossil
 
 ## Building and Releasing
 
-Generally releases are built by running the `build_release.sh` script in `tools/release/` directory but generally this is what the script does for each target system:
+Releases are built by running the `build_release.sh` script in `tools/release/` directory but generally this is what the script does for each target system:
 
 ```bash
 emacs Cargo.toml  # update the version
