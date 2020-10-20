@@ -198,6 +198,16 @@ fn zsh_hook(bin_name: String) -> String {
     unset output
     unset status_code
 }}
+
+function _wd {{
+    local line
+    WARPS=`wd list --completion`
+    _arguments -C \
+    "1: :(${{WARPS}})" \
+    "*::arg:->args"
+}}
+
+compdef _wd wd
 "#,
         bin_name
     );
