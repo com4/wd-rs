@@ -2,11 +2,12 @@
 
 waprdir provides shortcuts for `cd` under the `wd` alias. This is a cross-shell/cross-platform drop in replacement the [zsh plugin](https://github.com/mfaerevaag/wd) by mfaerevaag (that is to say all of your warps are stored in `~/.warprc` and are compatible with the plugin.)
 
-To view the repository visit https://rc4.net/wd-rs/
+## Note
+If you are seeing this on Github you are viewing a read-only mirror of the source code. To view the entire repository and download releases please visit https://rc4.net/wd-rs/
 
 ## Source Control
 
-If you would like a copy of the repository download the latest version of [Fossil](https://fossil-scm.org) and run something like this:
+To grab a copy of the repository download the latest version of [Fossil](https://fossil-scm.org) and run something like this:
 ```bash
 mkdir ./repositories ./wd-rs
 fossil clone https://rc4.net/wd-rs/ ./repositories/wd-rs.fossil
@@ -16,7 +17,7 @@ fossil open ../repositories/wd-rs.fossil
 
 ## Building and Releasing
 
-Generally releases are built by running these commands on the target operating system:
+Generally releases are built by running the `build_release.sh` script in `tools/release/` directory but generally this is what the script does for each target system:
 
 ```bash
 emacs Cargo.toml  # update the version
@@ -43,7 +44,7 @@ fossil uv export warpdir-$VERSION-$ARCH.tar.gz warpdir-$VERSION-$ARCH.tar.gz
 fossil uv export warpdir-$VERSION-$ARCH.sha256 warpdir-$VERSION-$ARCH.sha256
 sha256sum -c warpdir-$VERSION-$ARCH.sha256
 
-# If it wasn't corrupted
+# If the hash matches and the archive wasn't corrupted
 gpg --local-user <key> --sign --detach-sig -a --output warpdir-$VERSION-$ARCH.tar.gz.gpg warpdir-$VERSION-$ARCH.tar.gz
 gpg --verify warpdir-$VERSION-$ARCH.tar.gz.gpg warpdir-$VERSION-$ARCH.tar.gz
 
