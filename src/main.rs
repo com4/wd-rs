@@ -32,18 +32,18 @@ fn get_rc_path() -> Result<String, io::Error> {
     return Ok(match env::var(ENV_RC_PATH) {
         Ok(d) => d,
         Err(_) => match home_dir() {
-	    // Try the home directory
+        // Try the home directory
             Some(mut d) => {
                 d.push(".warprc");
                 match d.to_str() {
-		    Some(path) => path.to_string(),
-		    None => {
-			return Err(io::Error::new(
-			    io::ErrorKind::Other,
-			    "unable to guess path of rc file. (non-UTF8 chars in path)",
-			))
-		    }
-		}
+            Some(path) => path.to_string(),
+            None => {
+            return Err(io::Error::new(
+                io::ErrorKind::Other,
+                "unable to guess path of rc file. (non-UTF8 chars in path)",
+            ))
+            }
+        }
             }
             None => {
                 return Err(io::Error::new(
@@ -171,7 +171,7 @@ wd() {{
     output=$({} $@)
     status_code=$?
     if [[ $status_code -eq 0 ]]; then
-	cd "$output"
+    cd "$output"
     elif [[ "$output" != "" ]]; then
         echo "$output"
     fi
@@ -191,7 +191,7 @@ fn zsh_hook(bin_name: String) -> String {
     output=$({} $@)
     status_code=$?
     if [[ $status_code -eq 0 ]]; then
-	cd "$output"
+    cd "$output"
     elif [[ "$output" != "" ]]; then
         echo "$output"
     fi
@@ -256,8 +256,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .about(about_text.as_str())
         .version(short_version.as_str())
         .global_setting(AppSettings::VersionlessSubcommands)
-	// Version is handled manually so it can display the more verbose version and send output to stderr.
-	.global_setting(AppSettings::DisableVersion)
+    // Version is handled manually so it can display the more verbose version and send output to stderr.
+    .global_setting(AppSettings::DisableVersion)
         .global_setting(AppSettings::ColoredHelp)
         .arg(
             Arg::with_name("verbosity")
@@ -287,11 +287,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .subcommand(
             SubCommand::with_name("list")
                 .arg(Arg::with_name("completion")
-		     .long("completion")
-		     .short("c")
-		     .required(false)
-		     .help(
-			 "List warp points space delimited on a single line for completion scripts",
+             .long("completion")
+             .short("c")
+             .required(false)
+             .help(
+             "List warp points space delimited on a single line for completion scripts",
                      ))
                 .about("Print all warp points"),
         )
