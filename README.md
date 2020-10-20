@@ -3,7 +3,7 @@
 waprdir provides shortcuts for `cd` under the `wd` alias. This is a cross-shell/cross-platform drop in replacement the [zsh plugin](https://github.com/mfaerevaag/wd) by mfaerevaag (that is to say all of your warps are stored in `~/.warprc` and are compatible with the plugin.)
 
 ## Note
-If you are seeing this on Github you are viewing a read-only mirror of the source code. To view the entire repository and download releases please visit https://rc4.net/wd-rs/
+If you are seeing this on Github you are viewing a read-only mirror of the source code. You can view the entire repository and download releases at https://rc4.net/wd-rs/
 
 ## Source Control
 
